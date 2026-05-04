@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>文件转Markdown整合器 | 拖拽即用</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: linear-gradient(145deg, #1a1e2b 0%, #2a2f3f 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', system-ui, sans-serif;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      width: 100%;
+      max-width: 900px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-radius: 2.5rem;
+      padding: 2rem;
+      box-shadow: 0 30px 50px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 1.8rem;
+    }
+    h1 {
+      text-align: center;
+      font-weight: 500;
+      font-size: 2rem;
+      letter-spacing: 2px;
+      color: #e0e5f0;
+      margin-bottom: 0.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    h1 span {
+      background: #3e4b6b;
+      padding: 0.2rem 1rem;
+      border-radius: 3rem;
+      font-size: 1rem;
+      font-weight: 400;
+      color: #cbd5ff;
+      letter-spacing: 0.3px;
+    }
+    .drop-zone {
+      border: 2px dashed #6d7a9c;
+      border-radius: 2rem;
+      background: rgba(20, 24, 35, 0.7);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      color: #b9c2da;
+      box-shadow: inset 0 4px 12px rgba(0,0,0,0.3);
+      backdrop-filter: blur(4px);
+    }
+    .drop-zone.dragover {
+      border-color: #f0b27a;
+      background: rgba(45, 52, 70, 0.8);
+      color: #f7dcb4;
+      transform: scale(1.01);
+      box-shadow: 0 0 25px rgba(240, 178, 122, 0.45);
+      border-style: solid;
+    }
+    .drop-zone p {
+      font-size: 1.2rem;
+      margin: 0.3rem 0;
+      line-height: 1.5;
+    }
+    .drop-zone .icon {
+      font-size: 2.8rem;
+      margin-bottom: 0.5rem;
+      filter: drop-shadow(0 6px 8px black);
+    }
+    .file-list {
+      background: rgba(10, 12, 20, 0.55);
+      border-radius: 1.5rem;
+      padding: 1.2rem;
+      max-height: 220px;
+      overflow-y: auto;
+      border: 1px solid rgba(255,255,255,0.15);
+      backdrop-filter: blur(8px);
+      font-size: 0.9rem;
+    }
+    .file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255,255,255,0.07);
+      margin-bottom: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      color: #d3d9f0;
+      transition: 0.2s;
+      word-break: break-word;
+    }
+    .file-item:hover {
+      background: rgba(255,255,255,0.15);
+    }
+    .file-name {
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .remove-btn {
+      background: none;
+      border: none;
+      color: #f5a97f;
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0 0.3rem;
+      border-radius: 50%;
+      transition: 0.2s;
+      line-height: 1;
+    }
+    .remove-btn:hover {
+      color: #ffb48a;
+      background: rgba(255,255,255,0.1);
+      transform: scale(1.1);
+    }
+    .actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    button {
+      background: #3a4460;
+      border: none;
+      padding: 0.9rem 2rem;
+      border-radius: 3rem;
+      font-weight: 600;
+      font-size: 1rem;
+      letter-spacing: 0.6px;
+      color: #ecf0f3;
+      background: linear-gradient(135deg, #414d6b, #2c3347);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      border: 1px solid rgba(255,255,255,0.1);
+      flex: 1;
+      justify-content: center;
+    }
+    button:hover {
+      background: linear-gradient(135deg, #57668b, #3b4258);
+      box-shadow: 0 10px 22px rgba(0,0,0,0.7);
+      color: white;
+      border-color: rgba(255,255,255,0.25);
+    }
+    button:active {
+      transform: translateY(2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+    }
+    .clear-btn {
+      background: linear-gradient(135deg, #4a3b4f, #2d2433);
+      flex: 0.6;
+    }
+    .output-area {
+      margin-top: 0.3rem;
+    }
+    textarea {
+      width: 100%;
+      height: 260px;
+      background: #0c0e16;
+      border: 1px solid #4a5370;
+      border-radius: 1.5rem;
+      padding: 1.2rem;
+      color: #e2e8ff;
+      font-family: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+      font-size: 0.9rem;
+      resize: vertical;
+      outline: none;
+      backdrop-filter: blur(12px);
+      box-shadow: inset 0 4px 18px black;
+      line-height: 1.5;
+    }
+    .copy-notice {
+      color: #b9e6b0;
+      font-size: 0.85rem;
+      text-align: right;
+      margin-top: 0.3rem;
+      opacity: 0.9;
+      min-height: 1.2rem;
+    }
+    .footer-note {
+      text-align: center;
+      color: #8e98b3;
+      font-size: 0.8rem;
+      margin-top: -0.5rem;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>
+    📑 Markdown 整合器
+    <span>拖入文件 · 自动生成</span>
+  </h1>
+
+  <!-- 拖放区域 -->
+  <div id="dropZone" class="drop-zone">
+    <div class="icon">📂⬇️</div>
+    <p><strong>将文件拖拽到此处</strong></p>
+    <p style="font-size:0.9rem; opacity:0.8;">支持 .py .js .ts .txt .md 等任意文本文件</p>
+    <p style="font-size:0.8rem; margin-top:0.5rem; color:#a5b3d9;">（例如 backtester.py 、 data_fetcher.py）</p>
+  </div>
+
+  <!-- 已添加文件列表 -->
+  <div class="file-list" id="fileListContainer">
+    <div style="color:#7b85a5; text-align:center; padding:0.8rem;">暂无文件，请拖入文件</div>
+  </div>
+
+  <!-- 操作按钮 -->
+  <div class="actions">
+    <button id="generateBtn"><span>⚡</span> 生成 Markdown</button>
+    <button id="copyBtn"><span>📋</span> 复制全部</button>
+    <button id="clearBtn" class="clear-btn"><span>🗑️</span> 清空</button>
+  </div>
+
+  <!-- 输出区域 -->
+  <div class="output-area">
+    <textarea id="markdownOutput" placeholder="生成的Markdown将显示在这里..." readonly></textarea>
+    <div id="copyNotice" class="copy-notice"></div>
+  </div>
+  <div class="footer-note">
+    ✅ 格式：文件名: 内容 (代码块包裹)
+  </div>
+</div>
+
+<script>
+  (function() {
+    // ---------- 状态管理 ----------
+    // 使用 Map 存储文件：key = 文件名（包含扩展名），value = 文件内容字符串
+    const fileStore = new Map();
+
+    // DOM 元素
+    const dropZone = document.getElementById('dropZone');
+    const fileListContainer = document.getElementById('fileListContainer');
+    const markdownOutput = document.getElementById('markdownOutput');
+    const generateBtn = document.getElementById('generateBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const copyNotice = document.getElementById('copyNotice');
+
+    // ---------- 工具函数 ----------
+    function renderFileList() {
+      fileListContainer.innerHTML = '';
+      if (fileStore.size === 0) {
+        fileListContainer.innerHTML = '<div style="color:#7b85a5; text-align:center; padding:0.8rem;">暂无文件，请拖入文件</div>';
+        return;
+      }
+
+      // 按照文件名排序（可选）
+      const sortedNames = Array.from(fileStore.keys()).sort((a, b) => a.localeCompare(b));
+
+      for (const fileName of sortedNames) {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'file-name';
+        nameSpan.innerHTML = `📄 ${escapeHTML(fileName)}`;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.innerHTML = '✖';
+        removeBtn.title = '移除文件';
+        removeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          fileStore.delete(fileName);
+          renderFileList();
+          // 移除文件后不清空输出区域，保留之前生成的内容，但建议用户重新生成。
+          // 也可以自动清空markdown输出？为了体验，不清空，但提示。
+          markdownOutput.value = '';  // 清空输出更安全，避免显示过时内容
+          copyNotice.textContent = '';
+        });
+
+        fileItem.appendChild(nameSpan);
+        fileItem.appendChild(removeBtn);
+        fileListContainer.appendChild(fileItem);
+      }
+    }
+
+    // 简单的防XSS转义
+    function escapeHTML(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // 读取文件内容 (文本)
+    function readFileContent(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          resolve(e.target.result);
+        };
+        reader.onerror = (e) => {
+          reject(new Error(`无法读取文件 ${file.name}`));
+        };
+        reader.readAsText(file, 'UTF-8'); // 默认UTF-8，覆盖绝大多数代码文件
+      });
+    }
+
+    // 处理添加文件 (支持单个文件或文件列表)
+    async function addFiles(files) {
+      const validFiles = [];
+      // 过滤：只保留文件（不包括目录），且非空大小(实际可以读取空文件)
+      for (const file of files) {
+        if (file && file.name && file.size !== undefined) {
+          // 排除文件夹（webkitRelativePath有时存在，但拖拽通常File）
+          if (file.type === '' && file.size === 0 && file.name.endsWith('/')) {
+            // 可能是目录，跳过
+            continue;
+          }
+          validFiles.push(file);
+        }
+      }
+
+      if (validFiles.length === 0) return;
+
+      // 显示加载状态（可选）
+      const originalPlaceholder = dropZone.querySelector('p strong')?.innerText;
+      const statusElement = dropZone.querySelector('p:last-child');
+      if (statusElement) statusElement.textContent = '读取中...';
+
+      let addedCount = 0;
+      let skippedCount = 0;
+
+      for (const file of validFiles) {
+        try {
+          const content = await readFileContent(file);
+          const fileName = file.name; // 包含扩展名，如 backtester.py
+
+          // 如果文件名已存在，则覆盖（最新拖入的覆盖旧的），也可以询问。这里采用覆盖并提示。
+          if (fileStore.has(fileName)) {
+            // 覆盖旧文件
+            console.log(`文件 ${fileName} 已存在，将被覆盖。`);
+          }
+          fileStore.set(fileName, content);
+          addedCount++;
+        } catch (err) {
+          console.error(err);
+          skippedCount++;
+        }
+      }
+
+      // 恢复提示文字
+      if (statusElement) statusElement.textContent = '（例如 backtester.py 、 data_fetcher.py）';
+      
+      renderFileList();
+      
+      // 拖入后自动清空之前的Markdown输出？为了明确，自动清空输出区域，提醒重新生成。
+      markdownOutput.value = '';
+      copyNotice.textContent = `✓ 已添加 ${addedCount} 个文件` + (skippedCount > 0 ? `，跳过 ${skippedCount} 个` : '');
+      
+      // 短暂显示通知后淡化
+      setTimeout(() => {
+        if (copyNotice.textContent.includes('已添加')) {
+          copyNotice.textContent = '';
+        }
+      }, 2500);
+    }
+
+    // 生成 Markdown 字符串
+    function generateMarkdown() {
+      if (fileStore.size === 0) {
+        markdownOutput.value = '⚠️ 没有文件。请先拖入文件。';
+        return '';
+      }
+
+      const sortedNames = Array.from(fileStore.keys()).sort((a, b) => a.localeCompare(b));
+      let mdContent = '';
+
+      for (const fileName of sortedNames) {
+        const content = fileStore.get(fileName);
+        // 格式：文件名: 内容 （按照要求：backtester.py:内容 ）
+        // 但为了Markdown更清晰，使用代码块包裹内容，并明确文件名。
+        // 完全符合描述：“backtester.py:内容 data_fetcher.py” 可以理解为连续格式。
+        // 我们设计为：
+        // **backtester.py:**
+        // ```python
+        // 内容
+        // ```
+        // 但用户说“backtester.py:内容”，可能希望紧凑。提供清晰版本。
+        
+        // 决定采用易读且符合 Markdown 的格式：
+        // 文件名: 
+        // ```语言标识（根据扩展名推断）
+        // 文件内容
+        // ```
+        
+        const extension = fileName.split('.').pop()?.toLowerCase() || '';
+        const languageMap = {
+          'py': 'python',
+          'js': 'javascript',
+          'ts': 'typescript',
+          'jsx': 'jsx',
+          'tsx': 'tsx',
+          'json': 'json',
+          'md': 'markdown',
+          'html': 'html',
+          'css': 'css',
+          'java': 'java',
+          'cpp': 'cpp',
+          'c': 'c',
+          'h': 'c',
+          'txt': 'text',
+          'yml': 'yaml',
+          'yaml': 'yaml',
+          'xml': 'xml',
+          'sql': 'sql',
+          'sh': 'bash',
+          'bat': 'batch',
+        };
+        const lang = languageMap[extension] || '';
+
+        mdContent += `**${fileName}:**\n`;
+        mdContent += '```' + (lang ? lang : '') + '\n';
+        mdContent += content;
+        // 确保内容结尾换行，避免代码块粘连
+        if (!content.endsWith('\n')) {
+          mdContent += '\n';
+        }
+        mdContent += '```\n\n';
+      }
+
+      // 去掉末尾多余空行
+      return mdContent.trimEnd() + '\n';
+    }
+
+    function updateOutputFromGenerate() {
+      const md = generateMarkdown();
+      markdownOutput.value = md;
+      if (fileStore.size > 0 && md.startsWith('**')) {
+        copyNotice.textContent = '✅ Markdown 已生成';
+        setTimeout(() => {
+          if (copyNotice.textContent === '✅ Markdown 已生成') copyNotice.textContent = '';
+        }, 2000);
+      } else if (fileStore.size === 0) {
+        copyNotice.textContent = '⛔ 无文件';
+      }
+    }
+
+    // 复制到剪贴板
+    async function copyToClipboard() {
+      const text = markdownOutput.value;
+      if (!text || text.startsWith('⚠️')) {
+        copyNotice.textContent = '❌ 没有可复制的内容';
+        setTimeout(() => { copyNotice.textContent = ''; }, 2000);
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        copyNotice.textContent = '📋 已复制到剪贴板！';
+        setTimeout(() => {
+          if (copyNotice.textContent === '📋 已复制到剪贴板！') copyNotice.textContent = '';
+        }, 2200);
+      } catch (err) {
+        copyNotice.textContent = '⚠️ 复制失败，请手动复制';
+        setTimeout(() => { copyNotice.textContent = ''; }, 2500);
+      }
+    }
+
+    function clearAllFiles() {
+      fileStore.clear();
+      renderFileList();
+      markdownOutput.value = '';
+      copyNotice.textContent = '已清空所有文件';
+      setTimeout(() => {
+        if (copyNotice.textContent === '已清空所有文件') copyNotice.textContent = '';
+      }, 1800);
+    }
+
+    // ---------- 事件绑定 ----------
+    // 拖拽事件
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('dragover');
+
+      const dt = e.dataTransfer;
+      if (dt && dt.files && dt.files.length > 0) {
+        // 从FileList转为数组
+        const filesArray = Array.from(dt.files);
+        addFiles(filesArray);
+      }
+    });
+
+    // 也支持点击拖拽区域触发文件选择（增强体验）
+    dropZone.addEventListener('click', () => {
+      // 创建隐藏的文件输入
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.multiple = true;
+      fileInput.accept = '*/*'; // 接受所有文件，但读取文本。二进制跳过？我们会在读取时处理。
+      fileInput.onchange = (e) => {
+        if (fileInput.files && fileInput.files.length > 0) {
+          addFiles(Array.from(fileInput.files));
+        }
+        fileInput.remove();
+      };
+      fileInput.click();
+    });
+
+    // 按钮事件
+    generateBtn.addEventListener('click', updateOutputFromGenerate);
+    copyBtn.addEventListener('click', copyToClipboard);
+    clearBtn.addEventListener('click', clearAllFiles);
+
+    // 初始化渲染
+    renderFileList();
+    markdownOutput.value = '';
+
+    // 额外：如果用户通过粘贴等？只需拖拽。完成。
+  })();
+</script>
+</body>
+</html>
